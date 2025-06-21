@@ -5,6 +5,12 @@ import { z } from "zod";
 // Allow streaming responses up to 30 seconds
 export const maxDuration = 30;
 
+const RELEVANCE_AUTH_TOKEN = process.env.RELEVANCE_AUTH_TOKEN;
+
+if (!RELEVANCE_AUTH_TOKEN) {
+  throw new Error("RELEVANCE_AUTH_TOKEN is not set");
+}
+
 export async function POST(req: Request) {
   const { messages } = await req.json();
 
@@ -105,17 +111,32 @@ When you have collected comprehensive information, use the sendToAgent tool to s
             timestamp: user_data.timestamp || new Date().toISOString(),
           };
 
-          // TODO: Replace with actual endpoint when determined
-          // For now, we'll simulate the API call
-          console.log("Sending data to research agents:", dataWithId);
+          const endpoint =
+            "https://api-d7b62b.stack.tryrelevance.com/latest/agents/trigger";
 
           try {
-            // Simulate API call - replace with actual endpoint
-            // const response = await fetch('YOUR_ENDPOINT_HERE', {
-            //   method: 'POST',
-            //   headers: { 'Content-Type': 'application/json' },
-            //   body: JSON.stringify(dataWithId)
-            // });
+            const response = await fetch(endpoint, {
+              method: "POST",
+              headers: new Headers({
+                "Content-Type": "application/json",
+                Authorization: RELEVANCE_AUTH_TOKEN || "",
+              }),
+              body: JSON.stringify({
+                message: {
+                  role: "user",
+                  content: JSON.stringify(dataWithId),
+                },
+              }),
+            });
+
+            if (!response.ok) {
+              console.error(
+                "API call failed:",
+                response.status,
+                await response.text()
+              );
+              throw new Error("Relevance API call failed");
+            }
 
             return `Thank you for sharing all of this important information with me. I've securely sent your health data to our research agents who will now:
 
@@ -133,7 +154,8 @@ Our research agents will prepare a detailed report within 24-48 hours that will 
 - Trusted healthcare provider recommendations
 
 You should receive this comprehensive report via email once it's complete. Thank you for trusting us with your health information.`;
-          } catch {
+          } catch (error) {
+            console.error("Error in sendToAgent tool:", error);
             return `I've collected all your information and will ensure it gets to our research team. Due to a temporary technical issue, I'll make sure your data is processed manually. Your health information is important to us and will be handled with the utmost care and confidentiality.`;
           }
         },
