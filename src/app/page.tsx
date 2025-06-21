@@ -1,103 +1,120 @@
-import Image from "next/image";
+"use client";
 
-export default function Home() {
+import { useChat } from "@ai-sdk/react";
+import React from "react";
+
+const ArrowUpIcon = () => (
+  <svg
+    width="16"
+    height="16"
+    viewBox="0 0 24 24"
+    fill="none"
+    xmlns="http://www.w3.org/2000/svg"
+  >
+    <path
+      d="M12 19V5M12 5L5 12M12 5L19 12"
+      stroke="white"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+  </svg>
+);
+
+export default function HerHealthAgents() {
+  const { messages, input, handleInputChange, handleSubmit, isLoading } =
+    useChat({
+      initialMessages: [
+        {
+          id: "1",
+          role: "assistant",
+          content:
+            "Hello! I'm Luna, and I'm here to help collect information about your female health related concerns. This information will be used for research purposes. I won't be providing any medical advice - I'm simply here to listen and gather details and help you by connecting you to reliable, respected and supportive resources. Shall we start with a few basic questions?",
+          createdAt: new Date(),
+        },
+      ],
+      maxSteps: 10,
+    });
+
+  const messagesEndRef = React.useRef<HTMLDivElement>(null);
+  const inputRef = React.useRef<HTMLInputElement>(null);
+
+  React.useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages]);
+
+  React.useEffect(() => {
+    if (!isLoading) {
+      inputRef.current?.focus();
+    }
+  }, [isLoading, messages]);
+
   return (
-    <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
-      <main className="flex flex-col gap-[32px] row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="list-inside list-decimal text-sm/6 text-center sm:text-left font-[family-name:var(--font-geist-mono)]">
-          <li className="mb-2 tracking-[-.01em]">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] px-1 py-0.5 rounded font-[family-name:var(--font-geist-mono)] font-semibold">
-              src/app/page.tsx
-            </code>
-            .
-          </li>
-          <li className="tracking-[-.01em]">
-            Save and see your changes instantly.
-          </li>
-        </ol>
+    <div
+      className="flex flex-col h-screen"
+      style={{ backgroundColor: "#FDF4EC" }}
+    >
+      <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-6">
+        {messages.map((message) => (
+          <div
+            key={message.id}
+            className={`flex flex-col ${
+              message.role === "user" ? "items-end" : "items-start"
+            }`}
+          >
+            <div
+              className={`max-w-[80%] md:max-w-[65%] rounded-2xl p-4 ${
+                message.role === "user"
+                  ? "text-black rounded-br-none"
+                  : "py-4 px-6 max-w-[80%] text-[20px] leading-[28px] text-black bg-white rounded-t-md rounded-br-md border-2 border-black shadow-[-8px_8px_0px_0px_#000] ml-2 mb-[8px] duration-300 animate-in fade-in-0 zoom-in-75 origin-bottom-left"
+              }`}
+              style={{
+                backgroundColor:
+                  message.role === "user" ? "#F8D7C4" : "#FFFFFF",
+              }}
+            >
+              {message.content.split("\n").map((line, i) => (
+                <p key={i}>{line}</p>
+              ))}
+            </div>
+            {message.createdAt && (
+              <p className="text-xs mt-2" style={{ color: "#9E9E9E" }}>
+                {new Date(message.createdAt).toLocaleTimeString([], {
+                  hour: "2-digit",
+                  minute: "2-digit",
+                })}
+              </p>
+            )}
+          </div>
+        ))}
+        <div ref={messagesEndRef} />
+      </div>
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:w-auto"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
+      <div className="p-4 bg-transparent">
+        <div className="max-w-4xl mx-auto">
+          <form onSubmit={handleSubmit} className="relative">
+            <input
+              ref={inputRef}
+              value={input}
+              onChange={handleInputChange}
+              placeholder=""
+              className="w-full bg-white rounded-2xl px-5 py-4 pr-16 text-black border-2 border-gray-200 focus:outline-none focus:ring-2 focus:ring-[#F8D7C4] shadow-sm"
+              disabled={isLoading}
+              style={{
+                color: "#3D3D3D",
+              }}
             />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 w-full sm:w-auto md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
+            <button
+              type="submit"
+              disabled={isLoading || !input.trim()}
+              className="absolute right-3 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full flex items-center justify-center disabled:opacity-50 transition-colors"
+              style={{ backgroundColor: "#5A5A5A" }}
+            >
+              <ArrowUpIcon />
+            </button>
+          </form>
         </div>
-      </main>
-      <footer className="row-start-3 flex gap-[24px] flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
+      </div>
     </div>
   );
 }
