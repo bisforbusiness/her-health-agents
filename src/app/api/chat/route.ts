@@ -113,7 +113,7 @@ When you have collected comprehensive information, use the sendToAgent tool to s
 
           const endpoint =
             "https://api-d7b62b.stack.tryrelevance.com/latest/agents/trigger";
-
+          const agent_id = "f4637377-01a6-47dc-b6c0-b652551816dd";
           try {
             const response = await fetch(endpoint, {
               method: "POST",
@@ -122,6 +122,7 @@ When you have collected comprehensive information, use the sendToAgent tool to s
                 Authorization: RELEVANCE_AUTH_TOKEN || "",
               }),
               body: JSON.stringify({
+                agent_id,
                 message: {
                   role: "user",
                   content: JSON.stringify(dataWithId),
