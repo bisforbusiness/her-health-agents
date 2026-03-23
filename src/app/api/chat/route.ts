@@ -81,4 +81,4 @@ Tone: calm, grounded, human. Assume the person is capable and informed. Validate
           lifestyle: string; family_history: string;
           primary_concerns: string; additional_notes: string;
         }}) => {
-          const
+          const 
