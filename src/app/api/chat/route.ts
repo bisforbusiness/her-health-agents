@@ -1,5 +1,5 @@
 import { anthropic } from "@ai-sdk/anthropic";
-import { streamText } from "ai";
+import { streamText, tool } from "ai";
 import { z } from "zod";
 
 export const maxDuration = 30;
@@ -12,6 +12,7 @@ export async function POST(req: Request) {
   const result = streamText({
     model: anthropic("claude-sonnet-4-5-20251001"),
     messages,
+    maxSteps: 10,
     system: `You are the HHA Guided Intake Assistant, created by Her Health Agents. Your role is to conduct a warm, structured intake conversation to gather information about a person's women's health concerns so they can be connected to relevant, credible resources.
 
 You are not a doctor and you do not provide medical advice. Be warm, direct, and human — never clinical, never preachy.
@@ -38,9 +39,9 @@ Collect through natural conversation:
 Once you have comprehensive information, use the sendToAgent tool to submit.
 After submitting, thank them and confirm their information will be used to identify relevant resources.`,
     tools: {
-      sendToAgent: {
+      sendToAgent: tool({
         description: "Submit collected health information. Only use when comprehensive information has been gathered.",
-        inputSchema: z.object({
+        parameters: z.object({
           user_id: z.string().describe("Generated unique identifier"),
           timestamp: z.string().describe("Current date/time"),
           age: z.string().describe("User age"),
@@ -60,26 +61,7 @@ After submitting, thank them and confirm their information will be used to ident
           primary_concerns: z.string().describe("Main concerns"),
           additional_notes: z.string().describe("Other relevant info"),
         }),
-        execute: async (data: {
-          user_id: string;
-          timestamp: string;
-          age: string;
-          tracking_level: string;
-          tracking_tools: string;
-          symptoms: string[];
-          symptom_duration: string;
-          symptom_severity: string;
-          cycle_regularity: string;
-          last_period: string;
-          daily_impact: string;
-          triggers: string;
-          medications: string;
-          stress_sleep: string;
-          lifestyle: string;
-          family_history: string;
-          primary_concerns: string;
-          additional_notes: string;
-        }) => {
+        execute: async (data) => {
           const dataWithId = {
             ...data,
             user_id: data.user_id || `user_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
@@ -113,7 +95,7 @@ After submitting, thank them and confirm their information will be used to ident
           console.log("[HHA] Intake collected:", JSON.stringify(dataWithId, null, 2));
           return `Thank you for sharing. Your information has been collected and will be used to identify relevant resources. Reference: ${dataWithId.user_id}`;
         },
-      },
+      }),
     },
   });
 
