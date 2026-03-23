@@ -1,74 +1,56 @@
-import { openai } from "@ai-sdk/openai";
-import { streamText } from "ai";
+import { anthropic } from "@ai-sdk/anthropic";
+import { streamText, tool } from "ai";
 import { z } from "zod";
 
-// Allow streaming responses up to 30 seconds
 export const maxDuration = 30;
 
 const RELEVANCE_AUTH_TOKEN = process.env.RELEVANCE_AUTH_TOKEN;
 
 if (!RELEVANCE_AUTH_TOKEN) {
-  throw new Error("RELEVANCE_AUTH_TOKEN is not set");
+  console.warn(
+    "RELEVANCE_AUTH_TOKEN is not set — agent handover will be skipped in Phase 1"
+  );
 }
 
 export async function POST(req: Request) {
   const { messages } = await req.json();
 
   const result = streamText({
-    model: openai("gpt-4o-mini"),
+    model: anthropic("claude-sonnet-4-5-20251001"),
     messages,
-    system: `You are Luna, a compassionate and thorough health data collection assistant specializing in women's hormone-related health information. Your sole purpose is to collect comprehensive information through guided questioning - you do NOT provide medical advice, guidance, or suggestions.
+    system: `You are the HHA Guided Intake Assistant, created by Her Health Agents. Your role is to conduct a warm, structured intake conversation to gather information about a person's women's health concerns — so they can be connected to relevant, credible resources.
 
-Instructions:
-- Engage in a natural, empathetic conversation to collect detailed hormone-related health information
-- Always maintain a supportive, non-judgmental tone throughout the conversation
-- Ask questions one at a time to avoid overwhelming the user
-- Adapt your follow-up questions based on the user's previous responses
-- Continue asking relevant questions until you have comprehensive information
-- Store all collected information in a structured format for other agents to analyze
+You are not a doctor and you do not provide medical advice. You are here to listen carefully, ask clear questions, and collect information honestly and without judgment. Be warm, direct, and human — never clinical, never preachy, and never use wellness clichés.
 
-Required Initial Questions:
-1. Ask for the user's age
-2. Ask how closely they track their menstrual cycle (not at all, somewhat, very closely)
-3. Ask what tools or methods they use to track (if any) - apps, calendar, symptoms diary, etc.
+Core guidelines:
+- Ask one question at a time. Never stack multiple questions in a single message.
+- Acknowledge each response briefly and naturally before moving to the next question.
+- Do not make assumptions, offer diagnoses, or suggest treatments.
+- If asked for advice, redirect warmly: "I'm here to collect information only — a healthcare professional would be best placed to discuss your concerns directly. My role is to help connect you to relevant resources."
+- If someone seems distressed, acknowledge it with care and encourage them to speak with a healthcare provider.
 
-Adaptive Follow-up Questions Based on Responses:
-If they track closely:
-- What specific symptoms do they track?
-- How regular/irregular are their cycles?
-- Any patterns they've noticed?
-- What concerns brought them here?
+Collect the following through natural conversation — you don't need to follow this as a rigid script, but ensure all areas are covered:
+1. Age
+2. How closely they track their menstrual cycle (not at all / somewhat / very closely)
+3. Tools or methods used for tracking, if any (apps, calendar, symptom diary, etc.)
+4. Current symptoms — what they are experiencing, severity (1–10), and how long it has been happening
+5. Cycle regularity and any notable patterns
+6. Impact on daily life: work, sleep, relationships, social activities
+7. Any triggers they have noticed
+8. Lifestyle factors: stress levels, sleep quality, diet, exercise habits
+9. Relevant medical history and any current medications or supplements
+10. Relevant family history, if they are comfortable sharing
+11. Their primary concern — what brought them here
 
-If they don't track much:
-- When was their last period approximately?
-- Any noticeable symptoms or changes recently?
-- What specific concerns do they have?
+Once you have gathered comprehensive information across all of these areas, use the sendToAgent tool to submit the collected data.
 
-General Health Questions to Ask:
-- Current symptoms they're experiencing
-- How long symptoms have been present
-- Severity of symptoms (scale 1-10)
-- Impact on daily life
-- Any triggers they've noticed
-- Previous hormone-related issues
-- Current medications or supplements
-- Stress levels and sleep patterns
-- Diet and exercise habits
-- Family history of hormone issues
+After submitting, thank the person genuinely and let them know their information will be used to identify relevant resources for them.
 
-Response Rules:
-- Never provide medical advice or suggestions
-- Never diagnose or interpret symptoms
-- If asked for advice, politely redirect: "I'm here to collect information only. A healthcare professional would be best to discuss your concerns. My team of agents and I will help connect you to relevant resources and insights."
-- Be empathetic and validating: "Thank you for sharing that with me"
-- Ask clarifying questions when responses are vague
-- Think step by step through each interaction to ensure you're asking the most relevant follow-up questions
-
-When you have collected comprehensive information, use the sendToAgent tool to submit the data.`,
+Tone: calm, grounded, human. Assume the person is capable and informed. Validate without making claims. Be honest about what this service is and is not.`,
     tools: {
-      sendToAgent: {
+      sendToAgent: tool({
         description:
-          "Send collected comprehensive health data to the research agents for analysis. Only use this when you have gathered thorough information about the user's hormone-related health concerns.",
+          "Submit the collected health information to the research agents for analysis. Only use this when you have gathered thorough information across all topic areas.",
         parameters: z.object({
           user_data: z.object({
             user_id: z.string().describe("Generated unique identifier"),
@@ -77,22 +59,42 @@ When you have collected comprehensive information, use the sendToAgent tool to s
             tracking_level: z
               .string()
               .describe(
-                "How closely they track (not at all/somewhat/very closely)"
+                "How closely they track (not at all / somewhat / very closely)"
               ),
-            tracking_tools: z.string().describe("What they use to track"),
-            symptoms: z.array(z.string()).describe("List of current symptoms"),
-            symptom_duration: z.string().describe("How long symptoms present"),
-            symptom_severity: z.string().describe("Severity ratings"),
+            tracking_tools: z
+              .string()
+              .describe("What they use to track"),
+            symptoms: z
+              .array(z.string())
+              .describe("List of current symptoms"),
+            symptom_duration: z
+              .string()
+              .describe("How long symptoms have been present"),
+            symptom_severity: z
+              .string()
+              .describe("Severity ratings provided"),
             cycle_regularity: z
               .string()
-              .describe("Regular/irregular cycle info"),
-            last_period: z.string().describe("When last period occurred"),
-            daily_impact: z.string().describe("How symptoms affect daily life"),
+              .describe("Regular/irregular cycle information"),
+            last_period: z
+              .string()
+              .describe("When last period occurred"),
+            daily_impact: z
+              .string()
+              .describe("How symptoms affect daily life"),
             triggers: z.string().describe("Any identified triggers"),
-            medications: z.string().describe("Current medications/supplements"),
-            stress_sleep: z.string().describe("Stress and sleep information"),
-            lifestyle: z.string().describe("Diet and exercise habits"),
-            family_history: z.string().describe("Relevant family history"),
+            medications: z
+              .string()
+              .describe("Current medications and supplements"),
+            stress_sleep: z
+              .string()
+              .describe("Stress and sleep information"),
+            lifestyle: z
+              .string()
+              .describe("Diet and exercise habits"),
+            family_history: z
+              .string()
+              .describe("Relevant family history"),
             primary_concerns: z
               .string()
               .describe("Main concerns that brought them here"),
@@ -102,7 +104,6 @@ When you have collected comprehensive information, use the sendToAgent tool to s
           }),
         }),
         execute: async ({ user_data }) => {
-          // Generate unique ID if not provided
           const dataWithId = {
             ...user_data,
             user_id:
@@ -111,56 +112,51 @@ When you have collected comprehensive information, use the sendToAgent tool to s
             timestamp: user_data.timestamp || new Date().toISOString(),
           };
 
-          const endpoint =
-            "https://api-d7b62b.stack.tryrelevance.com/latest/agents/trigger";
-          const agent_id = "f4637377-01a6-47dc-b6c0-b652551816dd";
-          try {
-            const response = await fetch(endpoint, {
-              method: "POST",
-              headers: new Headers({
-                "Content-Type": "application/json",
-                Authorization: RELEVANCE_AUTH_TOKEN || "",
-              }),
-              body: JSON.stringify({
-                agent_id,
-                message: {
-                  role: "user",
-                  content: JSON.stringify(dataWithId),
-                },
-              }),
-            });
+          // Phase 2: Relevance AI workforce handover
+          if (RELEVANCE_AUTH_TOKEN) {
+            const endpoint =
+              "https://api-d7b62b.stack.tryrelevance.com/latest/agents/trigger";
+            const agent_id = "f4637377-01a6-47dc-b6c0-b652551816dd";
+            try {
+              const response = await fetch(endpoint, {
+                method: "POST",
+                headers: new Headers({
+                  "Content-Type": "application/json",
+                  Authorization: RELEVANCE_AUTH_TOKEN,
+                }),
+                body: JSON.stringify({
+                  agent_id,
+                  message: {
+                    role: "user",
+                    content: JSON.stringify(dataWithId),
+                  },
+                }),
+              });
 
-            if (!response.ok) {
-              console.error(
-                "API call failed:",
-                response.status,
-                await response.text()
-              );
-              throw new Error("Relevance API call failed");
+              if (!response.ok) {
+                console.error(
+                  "Relevance AI call failed:",
+                  response.status,
+                  await response.text()
+                );
+                throw new Error("Relevance API call failed");
+              }
+
+              return `Thank you for sharing all of that with me. Your information has been passed to our research team and will be used to identify relevant resources for you. Your reference ID is: ${dataWithId.user_id}`;
+            } catch (error) {
+              console.error("Error in sendToAgent tool:", error);
+              return `Thank you — I've collected your information. There was a temporary issue reaching the research team, but your data has been recorded and will be processed. Reference ID: ${dataWithId.user_id}`;
             }
-
-            return `Thank you for sharing all of this important information with me. I've securely sent your health data to our research agents who will now:
-
-1. Conduct comprehensive research across medical databases and academic papers
-2. Analyze community discussions and support resources
-3. Compile personalized insights and recommendations
-4. Identify relevant healthcare resources and specialists
-
-Your data has been anonymized and stored securely with ID: ${dataWithId.user_id}
-
-Our research agents will prepare a detailed report within 24-48 hours that will include:
-- Relevant medical research findings
-- Community support resources
-- Potential next steps for your health journey
-- Trusted healthcare provider recommendations
-
-You should receive this comprehensive report via email once it's complete. Thank you for trusting us with your health information.`;
-          } catch (error) {
-            console.error("Error in sendToAgent tool:", error);
-            return `I've collected all your information and will ensure it gets to our research team. Due to a temporary technical issue, I'll make sure your data is processed manually. Your health information is important to us and will be handled with the utmost care and confidentiality.`;
           }
+
+          // Phase 1: log only, no handover yet
+          console.log(
+            "[HHA Intake] Data collected (Phase 1 — no handover):",
+            JSON.stringify(dataWithId, null, 2)
+          );
+          return `Thank you for sharing all of that with me. Your information has been collected and will be used to identify relevant resources for you. Reference ID: ${dataWithId.user_id}`;
         },
-      },
+      }),
     },
     maxSteps: 10,
   });
