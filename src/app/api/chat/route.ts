@@ -7,9 +7,7 @@ export const maxDuration = 30;
 const RELEVANCE_AUTH_TOKEN = process.env.RELEVANCE_AUTH_TOKEN;
 
 if (!RELEVANCE_AUTH_TOKEN) {
-  console.warn(
-    "RELEVANCE_AUTH_TOKEN is not set — agent handover will be skipped in Phase 1"
-  );
+  console.warn("RELEVANCE_AUTH_TOKEN is not set — agent handover will be skipped in Phase 1");
 }
 
 export async function POST(req: Request) {
@@ -51,7 +49,7 @@ Tone: calm, grounded, human. Assume the person is capable and informed. Validate
       sendToAgent: {
         description:
           "Submit the collected health information to the research agents for analysis. Only use this when you have gathered thorough information across all topic areas.",
-        parameters: z.object({
+        inputSchema: z.object({
           user_data: z.object({
             user_id: z.string().describe("Generated unique identifier"),
             timestamp: z.string().describe("Current date/time"),
@@ -74,72 +72,13 @@ Tone: calm, grounded, human. Assume the person is capable and informed. Validate
           }),
         }),
         execute: async ({ user_data }: { user_data: {
-          user_id: string;
-          timestamp: string;
-          age: string;
-          tracking_level: string;
-          tracking_tools: string;
-          symptoms: string[];
-          symptom_duration: string;
-          symptom_severity: string;
-          cycle_regularity: string;
-          last_period: string;
-          daily_impact: string;
-          triggers: string;
-          medications: string;
-          stress_sleep: string;
-          lifestyle: string;
-          family_history: string;
-          primary_concerns: string;
-          additional_notes: string;
+          user_id: string; timestamp: string; age: string;
+          tracking_level: string; tracking_tools: string;
+          symptoms: string[]; symptom_duration: string;
+          symptom_severity: string; cycle_regularity: string;
+          last_period: string; daily_impact: string;
+          triggers: string; medications: string; stress_sleep: string;
+          lifestyle: string; family_history: string;
+          primary_concerns: string; additional_notes: string;
         }}) => {
-          const dataWithId = {
-            ...user_data,
-            user_id:
-              user_data.user_id ||
-              `user_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-            timestamp: user_data.timestamp || new Date().toISOString(),
-          };
-
-          if (RELEVANCE_AUTH_TOKEN) {
-            const endpoint =
-              "https://api-d7b62b.stack.tryrelevance.com/latest/agents/trigger";
-            const agent_id = "f4637377-01a6-47dc-b6c0-b652551816dd";
-            try {
-              const response = await fetch(endpoint, {
-                method: "POST",
-                headers: new Headers({
-                  "Content-Type": "application/json",
-                  Authorization: RELEVANCE_AUTH_TOKEN,
-                }),
-                body: JSON.stringify({
-                  agent_id,
-                  message: {
-                    role: "user",
-                    content: JSON.stringify(dataWithId),
-                  },
-                }),
-              });
-
-              if (!response.ok) {
-                console.error("Relevance AI call failed:", response.status);
-                throw new Error("Relevance API call failed");
-              }
-
-              return `Thank you for sharing all of that with me. Your information has been passed to our research team. Reference ID: ${dataWithId.user_id}`;
-            } catch (error) {
-              console.error("Error in sendToAgent tool:", error);
-              return `Thank you — your information has been collected and will be processed. Reference ID: ${dataWithId.user_id}`;
-            }
-          }
-
-          console.log("[HHA Intake] Data collected:", JSON.stringify(dataWithId, null, 2));
-          return `Thank you for sharing all of that with me. Your information has been collected and will be used to identify relevant resources. Reference ID: ${dataWithId.user_id}`;
-        },
-      },
-    },
-    maxSteps: 10,
-  });
-
-  return result.toDataStreamResponse();
-}
+          const
