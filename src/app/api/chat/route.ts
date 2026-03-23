@@ -115,7 +115,6 @@ After submitting, thank them and confirm their information will be used to ident
         },
       },
     },
-    maxSteps: 10,
   });
 
   return result.toDataStreamResponse();
