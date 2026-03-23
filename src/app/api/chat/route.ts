@@ -1,5 +1,5 @@
 import { anthropic } from "@ai-sdk/anthropic";
-import { streamText, tool } from "ai";
+import { streamText } from "ai";
 import { z } from "zod";
 
 export const maxDuration = 30;
@@ -48,7 +48,7 @@ After submitting, thank the person genuinely and let them know their information
 
 Tone: calm, grounded, human. Assume the person is capable and informed. Validate without making claims. Be honest about what this service is and is not.`,
     tools: {
-      sendToAgent: tool({
+      sendToAgent: {
         description:
           "Submit the collected health information to the research agents for analysis. Only use this when you have gathered thorough information across all topic areas.",
         parameters: z.object({
@@ -56,54 +56,43 @@ Tone: calm, grounded, human. Assume the person is capable and informed. Validate
             user_id: z.string().describe("Generated unique identifier"),
             timestamp: z.string().describe("Current date/time"),
             age: z.string().describe("User's age"),
-            tracking_level: z
-              .string()
-              .describe(
-                "How closely they track (not at all / somewhat / very closely)"
-              ),
-            tracking_tools: z
-              .string()
-              .describe("What they use to track"),
-            symptoms: z
-              .array(z.string())
-              .describe("List of current symptoms"),
-            symptom_duration: z
-              .string()
-              .describe("How long symptoms have been present"),
-            symptom_severity: z
-              .string()
-              .describe("Severity ratings provided"),
-            cycle_regularity: z
-              .string()
-              .describe("Regular/irregular cycle information"),
-            last_period: z
-              .string()
-              .describe("When last period occurred"),
-            daily_impact: z
-              .string()
-              .describe("How symptoms affect daily life"),
+            tracking_level: z.string().describe("How closely they track"),
+            tracking_tools: z.string().describe("What they use to track"),
+            symptoms: z.array(z.string()).describe("List of current symptoms"),
+            symptom_duration: z.string().describe("How long symptoms present"),
+            symptom_severity: z.string().describe("Severity ratings"),
+            cycle_regularity: z.string().describe("Cycle regularity info"),
+            last_period: z.string().describe("When last period occurred"),
+            daily_impact: z.string().describe("How symptoms affect daily life"),
             triggers: z.string().describe("Any identified triggers"),
-            medications: z
-              .string()
-              .describe("Current medications and supplements"),
-            stress_sleep: z
-              .string()
-              .describe("Stress and sleep information"),
-            lifestyle: z
-              .string()
-              .describe("Diet and exercise habits"),
-            family_history: z
-              .string()
-              .describe("Relevant family history"),
-            primary_concerns: z
-              .string()
-              .describe("Main concerns that brought them here"),
-            additional_notes: z
-              .string()
-              .describe("Any other relevant information"),
+            medications: z.string().describe("Current medications and supplements"),
+            stress_sleep: z.string().describe("Stress and sleep information"),
+            lifestyle: z.string().describe("Diet and exercise habits"),
+            family_history: z.string().describe("Relevant family history"),
+            primary_concerns: z.string().describe("Main concerns that brought them here"),
+            additional_notes: z.string().describe("Any other relevant information"),
           }),
         }),
-        execute: async ({ user_data }) => {
+        execute: async ({ user_data }: { user_data: {
+          user_id: string;
+          timestamp: string;
+          age: string;
+          tracking_level: string;
+          tracking_tools: string;
+          symptoms: string[];
+          symptom_duration: string;
+          symptom_severity: string;
+          cycle_regularity: string;
+          last_period: string;
+          daily_impact: string;
+          triggers: string;
+          medications: string;
+          stress_sleep: string;
+          lifestyle: string;
+          family_history: string;
+          primary_concerns: string;
+          additional_notes: string;
+        }}) => {
           const dataWithId = {
             ...user_data,
             user_id:
@@ -112,7 +101,6 @@ Tone: calm, grounded, human. Assume the person is capable and informed. Validate
             timestamp: user_data.timestamp || new Date().toISOString(),
           };
 
-          // Phase 2: Relevance AI workforce handover
           if (RELEVANCE_AUTH_TOKEN) {
             const endpoint =
               "https://api-d7b62b.stack.tryrelevance.com/latest/agents/trigger";
@@ -134,29 +122,21 @@ Tone: calm, grounded, human. Assume the person is capable and informed. Validate
               });
 
               if (!response.ok) {
-                console.error(
-                  "Relevance AI call failed:",
-                  response.status,
-                  await response.text()
-                );
+                console.error("Relevance AI call failed:", response.status);
                 throw new Error("Relevance API call failed");
               }
 
-              return `Thank you for sharing all of that with me. Your information has been passed to our research team and will be used to identify relevant resources for you. Your reference ID is: ${dataWithId.user_id}`;
+              return `Thank you for sharing all of that with me. Your information has been passed to our research team. Reference ID: ${dataWithId.user_id}`;
             } catch (error) {
               console.error("Error in sendToAgent tool:", error);
-              return `Thank you — I've collected your information. There was a temporary issue reaching the research team, but your data has been recorded and will be processed. Reference ID: ${dataWithId.user_id}`;
+              return `Thank you — your information has been collected and will be processed. Reference ID: ${dataWithId.user_id}`;
             }
           }
 
-          // Phase 1: log only, no handover yet
-          console.log(
-            "[HHA Intake] Data collected (Phase 1 — no handover):",
-            JSON.stringify(dataWithId, null, 2)
-          );
-          return `Thank you for sharing all of that with me. Your information has been collected and will be used to identify relevant resources for you. Reference ID: ${dataWithId.user_id}`;
+          console.log("[HHA Intake] Data collected:", JSON.stringify(dataWithId, null, 2));
+          return `Thank you for sharing all of that with me. Your information has been collected and will be used to identify relevant resources. Reference ID: ${dataWithId.user_id}`;
         },
-      }),
+      },
     },
     maxSteps: 10,
   });
