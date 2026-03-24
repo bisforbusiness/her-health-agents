@@ -55,7 +55,6 @@ export default function HHAGuidedIntake() {
           createdAt: new Date(),
         },
       ],
-      maxSteps: 10,
     });
 
   const messagesEndRef = React.useRef<HTMLDivElement>(null);
