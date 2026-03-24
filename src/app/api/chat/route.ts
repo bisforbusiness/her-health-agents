@@ -99,5 +99,5 @@ After submitting, thank them and confirm their information will be used to ident
     },
   });
 
-  return result.toDataStreamResponse();
+  return result.toTextStreamResponse();
 }
